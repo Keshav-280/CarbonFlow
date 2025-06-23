@@ -1,81 +1,113 @@
 import streamlit as st
+from docxtpl import DocxTemplate
+import tempfile
+import os
+from datetime import datetime
 
+# Set page config
 st.set_page_config(page_title="Agroforestry PDD Builder", layout="wide")
-
 st.title("🌿 Agroforestry Project Design Document (PDD) Builder")
-st.markdown("Fill out each section to build your Verra-compatible PDD document.")
+st.markdown("Please fill out each section with care. We’ll compile everything into a Verra-compatible document.")
 
-# Create section navigation
-sections = ["1️⃣ Project Identification", "2️⃣ Project Description", "3️⃣ Baseline Scenario", 
-            "4️⃣ Additionality", "5️⃣ Monitoring Plan", "6️⃣ Grouped Project Setup"]
-selected = st.sidebar.radio("🧭 Go to Section", sections)
+# Navigation
+sections = [
+    "1️⃣ Project Identification", "2️⃣ Project Description", "3️⃣ Baseline Scenario",
+    "4️⃣ Additionality", "5️⃣ Monitoring Plan", "6️⃣ Grouped Project Setup", "📄 Download Final PDD"
+]
+selected = st.sidebar.radio("🧭 Navigate to Section", sections)
 
-# Store form data in session_state
+# Form data holder
 if "form_data" not in st.session_state:
     st.session_state.form_data = {}
 
-# Section 1: Project Identification
+# Helper for text input
+
+def empathetic_input(label, key, **kwargs):
+    st.session_state.form_data[key] = st.text_input(label, **kwargs)
+
+def empathetic_area(label, key, **kwargs):
+    st.session_state.form_data[key] = st.text_area(label, **kwargs)
+
+def upload_input(label, key):
+    uploaded = st.file_uploader(label, type=["jpg", "png", "jpeg", "pdf"])
+    if uploaded:
+        st.session_state.form_data[key] = uploaded.read()
+
+# Sections
 if selected == "1️⃣ Project Identification":
     st.subheader("📄 Project Identification")
     with st.form("id_form"):
-        st.session_state.form_data["project_title"] = st.text_input("Project Title")
-        st.session_state.form_data["location"] = st.text_input("Project Location (District, State, Country)")
-        st.session_state.form_data["gps"] = st.text_area("GPS Coordinates or Boundary Description")
-        st.session_state.form_data["proponents"] = st.text_input("Project Proponents (Organizations, People)")
-        st.session_state.form_data["start_year"] = st.number_input("Crediting Period Start Year", value=2025)
-        st.session_state.form_data["crediting_years"] = st.slider("Crediting Period (years)", 5, 40, 20)
-        st.session_state.form_data["methodology"] = st.text_input("Methodology Used (e.g., VM0047)")
-        submitted = st.form_submit_button("Save Section")
+        empathetic_input("🌱 What is the title of your project?", "project_title")
+        empathetic_input("📍 Where is your project located? (District, State, Country)", "location")
+        empathetic_area("🗺️ Share GPS coordinates or describe the project boundary.", "gps")
+        empathetic_input("👥 Who are the key project proponents?", "proponents")
+        st.session_state.form_data["start_year"] = st.number_input("📅 Start year of crediting period", value=2025)
+        st.session_state.form_data["crediting_years"] = st.slider("⏳ Credit period (years)", 5, 40, 20)
+        empathetic_input("📘 Methodology used (e.g., VM0047)", "methodology")
+        st.form_submit_button("💾 Save Section")
 
-# Section 2: Project Description
 elif selected == "2️⃣ Project Description":
     st.subheader("🌾 Project Description")
     with st.form("desc_form"):
-        st.session_state.form_data["land_history"] = st.text_area("Land-Use History (before the project)")
-        st.session_state.form_data["project_activities"] = st.text_area("Project Activities (what will be done?)")
-        st.session_state.form_data["species"] = st.text_input("Species to be Planted")
-        st.session_state.form_data["social_benefits"] = st.text_area("Expected Social Benefits")
-        st.session_state.form_data["env_benefits"] = st.text_area("Expected Environmental Benefits")
-        submitted = st.form_submit_button("Save Section")
+        empathetic_area("📖 Tell us about the land-use history.", "land_history")
+        empathetic_area("🚜 What project activities will you undertake?", "project_activities")
+        empathetic_input("🌳 What species will be planted?", "species")
+        empathetic_area("💬 What are the expected social benefits?", "social_benefits")
+        empathetic_area("🌍 What are the expected environmental benefits?", "env_benefits")
+        st.form_submit_button("💾 Save Section")
 
-# Section 3: Baseline Scenario
 elif selected == "3️⃣ Baseline Scenario":
     st.subheader("📉 Baseline Scenario")
     with st.form("baseline_form"):
-        st.session_state.form_data["baseline_desc"] = st.text_area("What would happen without the project?")
-        st.session_state.form_data["evidence"] = st.text_area("Evidence: images, land-use history, etc.")
-        st.session_state.form_data["degradation_proof"] = st.text_area("Proof of Degraded Land")
-        submitted = st.form_submit_button("Save Section")
+        empathetic_area("🧾 What would happen without the project?", "baseline_desc")
+        empathetic_area("📚 Provide evidence or land-use history.", "evidence")
+        upload_input("📸 Upload proof of degradation (photo, map, etc.)", "degradation_image")
+        st.form_submit_button("💾 Save Section")
 
-# Section 4: Additionality
 elif selected == "4️⃣ Additionality":
     st.subheader("🧮 Additionality")
     with st.form("add_form"):
-        st.session_state.form_data["why_additional"] = st.text_area("Why wouldn't this project happen without carbon finance?")
-        st.session_state.form_data["legal_barriers"] = st.selectbox("Is it required by law?", ["No", "Yes", "Not Sure"])
-        st.session_state.form_data["financial_barriers"] = st.text_area("Financial or technical barriers")
-        submitted = st.form_submit_button("Save Section")
+        empathetic_area("🤔 Why wouldn't this happen without carbon finance?", "why_additional")
+        st.session_state.form_data["legal_barriers"] = st.selectbox("📜 Is the project legally required?", ["No", "Yes", "Not Sure"])
+        empathetic_area("🛠️ Financial or technical barriers", "financial_barriers")
+        st.form_submit_button("💾 Save Section")
 
-# Section 5: Monitoring Plan
 elif selected == "5️⃣ Monitoring Plan":
     st.subheader("🔍 Monitoring Plan")
     with st.form("monitoring_form"):
-        st.session_state.form_data["monitoring_method"] = st.text_area("How will project progress be monitored?")
-        st.session_state.form_data["data_collected"] = st.text_area("What data will be collected (tree survival, growth, etc.)?")
-        st.session_state.form_data["monitoring_freq"] = st.selectbox("Monitoring Frequency", ["Annually", "Every 2 years", "Other"])
-        st.session_state.form_data["tools_used"] = st.text_input("Tools used (satellite, drone, app, etc.)")
-        submitted = st.form_submit_button("Save Section")
+        empathetic_area("📊 How will project progress be monitored?", "monitoring_method")
+        empathetic_area("📈 What data will be collected?", "data_collected")
+        st.session_state.form_data["monitoring_freq"] = st.selectbox("📅 Monitoring Frequency", ["Annually", "Every 2 years", "Other"])
+        empathetic_input("🔧 Tools used (satellite, drone, etc.)", "tools_used")
+        st.form_submit_button("💾 Save Section")
 
-# Section 6: Grouped Project
 elif selected == "6️⃣ Grouped Project Setup":
     st.subheader("📂 Grouped Project Setup")
     with st.form("group_form"):
-        st.session_state.form_data["multi_farmers"] = st.selectbox("Are multiple farmers involved?", ["Yes", "No"])
-        st.session_state.form_data["expansion_plan"] = st.text_area("How will new plots/farmers be added?")
-        st.session_state.form_data["aggregation_method"] = st.text_area("How is land being aggregated/organized?")
-        submitted = st.form_submit_button("Save Section")
+        st.session_state.form_data["multi_farmers"] = st.selectbox("👨‍🌾 Are multiple farmers involved?", ["Yes", "No"])
+        empathetic_area("📌 How will new plots/farmers be added?", "expansion_plan")
+        empathetic_area("🗂️ How is land organized or aggregated?", "aggregation_method")
+        st.form_submit_button("💾 Save Section")
 
-# Display form data summary
+elif selected == "📄 Download Final PDD":
+    st.subheader("📥 Download Final PDD")
+    with st.spinner("Generating your document..."):
+        doc = DocxTemplate("template_pdd.docx")  # You need to provide a docx template with Jinja2-style fields
+        context = st.session_state.form_data
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+            doc.render(context)
+            doc.save(tmp.name)
+            with open(tmp.name, "rb") as f:
+                st.download_button(
+                    "📄 Download Your PDD",
+                    data=f.read(),
+                    file_name="Agroforestry_PDD.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+        os.unlink(tmp.name)
+
+# Optional debug
 st.markdown("---")
-if st.button("📋 Show All Collected Data"):
+if st.checkbox("📋 Show Collected Data"):
     st.json(st.session_state.form_data)
